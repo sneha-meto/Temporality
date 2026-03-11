@@ -1,0 +1,15 @@
+label,misalign,coherence,spearman_r,p_value,n,sig
+fake,event_misalignment,coherence_emb,0.09729367167756023,0.15906594253183973,211,
+real,event_misalignment,coherence_emb,0.013573589254924849,0.8198422828363371,284,
+fake,event_misalignment,coherence_emb_std,0.07230012555312461,0.295861239744833,211,
+real,event_misalignment,coherence_emb_std,0.037548307402508786,0.5285592599794072,284,
+fake,event_misalignment,coherence_emb_min,-0.06422754603829436,0.3532126576316973,211,
+real,event_misalignment,coherence_emb_min,-0.09613754843122937,0.10593435926343782,284,
+fake,event_misalignment,coherence_ent_rep,0.08710213433356491,0.2065424138113534,212,
+real,event_misalignment,coherence_ent_rep,0.10147930087559591,0.0855940263611734,288,
+fake,event_misalignment,coherence_ent_unique,-0.1116329728584256,0.10504744794113828,212,
+real,event_misalignment,coherence_ent_unique,-0.14323988101814691,0.014980592495767643,288,*
+fake,event_misalignment,coherence_ent_ss,0.012219451074722889,0.859608465096752,212,
+real,event_misalignment,coherence_ent_ss,0.07457824121730655,0.20698890856582153,288,
+fake,event_misalignment,coherence_ent_so,0.1076562237416941,0.11810527658494889,212,
+real,event_misalignment,coherence_ent_so,0.013979578398973498,0.8132611064558172,288,
