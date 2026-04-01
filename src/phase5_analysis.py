@@ -6,6 +6,8 @@ Tests:
   H2 – art_shift_rate, art_entropy higher in fake news (Mann-Whitney U)
   H3 – event_misalignment correlates with lower coherence_emb in fake news
        (Spearman ρ, group difference test)
+  H4 – fake news exhibits greater tense misalignment between structural
+       sections (title/lead/body) than verified news (Mann-Whitney U)
 
 Classification:
   - Logistic Regression  (temporal features only)
@@ -144,12 +146,25 @@ def test_H2(df: pd.DataFrame) -> pd.DataFrame:
         "art_prop_past",
         "art_prop_present",
         "art_prop_future",
-        "align_title_body",
-        "align_lead_body",
-        "align_title_lead",
         "art_aspect_simple",
         "art_aspect_perfect",
         "art_aspect_progressive",
+    ]
+    features = [f for f in features if f in df.columns]
+    rows = [mwu_test(df, f) for f in features]
+    result = pd.DataFrame(rows)
+    log.info("\n%s", result.to_string(index=False))
+    return result
+
+
+# ── H4 – Structural tense misalignment ────────────────────────────────────
+
+def test_H4(df: pd.DataFrame) -> pd.DataFrame:
+    log.info("── H4: Structural Tense Misalignment ──")
+    features = [
+        "align_title_body",
+        "align_lead_body",
+        "align_title_lead",
     ]
     features = [f for f in features if f in df.columns]
     rows = [mwu_test(df, f) for f in features]
@@ -393,6 +408,32 @@ def plot_classification_results(clf_df: pd.DataFrame):
     log.info("Saved %s", out)
 
 
+def plot_sectional_alignment(df: pd.DataFrame):
+    align_cols = ["align_title_body", "align_lead_body", "align_title_lead"]
+    align_cols = [c for c in align_cols if c in df.columns]
+    if not align_cols:
+        return
+
+    means = df.groupby("label")[align_cols].mean().T
+    means.index = [c.replace("align_", "").replace("_", "↔").capitalize() for c in means.index]
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    x = np.arange(len(means))
+    width = 0.35
+    ax.bar(x - width / 2, means["real"], width, label="Real", color="#2ecc71", alpha=0.8)
+    ax.bar(x + width / 2, means["fake"], width, label="Fake", color="#e74c3c", alpha=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(means.index)
+    ax.set_ylabel("Mean L1 tense distance")
+    ax.set_title("H4: Sectional Tense Misalignment by Label")
+    ax.legend()
+    plt.tight_layout()
+    out = FIGURES / "sectional_alignment.png"
+    plt.savefig(out, dpi=150, bbox_inches="tight")
+    plt.close()
+    log.info("Saved %s", out)
+
+
 def plot_topic_analysis(df: pd.DataFrame):
     if "topic_name" not in df.columns or "art_shift_rate" not in df.columns:
         return
@@ -430,10 +471,12 @@ def run() -> None:
     h1 = test_H1(test_df)
     h2 = test_H2(test_df)
     h3 = test_H3(all_df)
+    h4 = test_H4(test_df)
 
     h1["hypothesis"] = "H1"
     h2["hypothesis"] = "H2"
-    hyp = pd.concat([h1, h2], ignore_index=True)
+    h4["hypothesis"] = "H4"
+    hyp = pd.concat([h1, h2, h4], ignore_index=True)
     hyp.to_csv(TABLES / "hypothesis_tests.csv", index=False)
     log.info("Hypothesis tests saved to %s", TABLES / "hypothesis_tests.csv")
 
@@ -453,8 +496,7 @@ def run() -> None:
 
     # ── Plots ─────────────────────────────────────────────────────
     h2_features = [
-        "art_shift_rate", "art_entropy", "art_prop_past",
-        "art_prop_present", "align_title_body", "align_lead_body",
+        "art_shift_rate", "art_entropy", "art_prop_past", "art_prop_present",
     ]
     h1_features = ["temporal_incons", "conn_density", "conn_diversity",
                    "event_misalignment", "abs_date_count"]
@@ -463,6 +505,7 @@ def run() -> None:
     plot_feature_distributions(all_df, vis_feats)
     plot_coherence_vs_misalignment(all_df)
     plot_tense_distributions(all_df)
+    plot_sectional_alignment(all_df)
     plot_topic_analysis(all_df)
     if not clf_df.empty:
         plot_classification_results(clf_df)
