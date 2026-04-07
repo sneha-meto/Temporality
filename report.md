@@ -77,17 +77,31 @@ We derive four hypotheses:
 
 We use the ISOT Fake News Dataset (Ahmed et al., 2017), which consists of two CSV files, `True.csv` and `Fake.csv`, containing real Reuters articles and fake news articles collected from unreliable sources and flagged by fact-checking organisations. Each article includes a title, full text, subject label, and publication date.
 
-| Aspect | True.csv | Fake.csv |
+| Statistic | Fake | Real | Total |
+|---|---|---|---|
+| Articles | 15,088 | 20,800 | 35,888 |
+| — Train (70%) | 10,561 | 14,560 | 25,121 |
+| — Dev (10%) | 1,509 | 2,080 | 3,589 |
+| — Test (20%) | 3,018 | 4,160 | 7,178 |
+| Word count — mean | 441.5 | 388.5 | |
+| Word count — median | 388.0 | 362.0 | |
+| Word count — std | 303.5 | 270.5 | |
+| Word count — range | 50–4,900 | 50–3,708 | |
+| Date range | 2016-01-01 – 2017-12-31 | 2016-01-13 – 2017-12-31 | |
+
+*Table 1: Summary statistics for the preprocessed corpus after cleaning, length filtering, date filtering (2016–2018), and deduplication.*
+
+| Topic (KMeans, k=5) | Fake | Real |
 |---|---|---|
-| Unique titles | 20,826 | 17,903 |
-| Unique texts | 21,192 | 22,851 |
-| Main subjects | Politics (53%), World (47%) | News (39%), Politics (29%), Other (32%) |
-| Time frame | 2016–2017 | 2015–2018 |
-| Fields | title, text, subject, date | |
+| world\_intl | 11,834 (78.4%) | 711 (3.4%) |
+| social\_crime | 1,436 (9.5%) | 7,252 (34.9%) |
+| other | 599 (4.0%) | 9,921 (47.7%) |
+| economy\_finance | 1,127 (7.5%) | 1,724 (8.3%) |
+| politics\_us | 92 (0.6%) | 1,192 (5.7%) |
 
-*Table 1: Summary statistics for the ISOT True and Fake news files.*
+*Table 2: Topic distribution by label after TF-IDF + KMeans clustering (k=5).*
 
-We note that the `subject` column in the two files is inconsistently labelled — `True.csv` uses two clean categories (`politicsNews`, `worldnews`) while `Fake.csv` uses a wider, noisier vocabulary. We therefore discard the original subject labels and re-assign topic labels using TF-IDF vectorisation with KMeans clustering (k=5) over the full article text, producing label-agnostic topic buckets. The fitted topic model is saved for reproducibility.
+The `subject` column in the raw ISOT files is inconsistently labelled — `True.csv` uses two clean categories (`politicsNews`, `worldnews`) while `Fake.csv` uses a wider, noisier vocabulary. We therefore discard the original subject labels and re-assign topic labels using TF-IDF vectorisation with KMeans clustering (k=5) over the full article text, producing label-agnostic topic buckets. The fitted topic model is saved for reproducibility. The topic distribution reveals a notable imbalance: fake news is heavily concentrated in `world_intl` (78.4%), while real news is more evenly distributed — a confound we control for via stratified splitting.
 
 Basic cleaning removes Reuters boilerplate (city datelines of the form `CITY (Reuters) –`), HTML tags, and duplicate texts. Articles with fewer than 50 or more than 5000 words are discarded. The corpus is restricted to the 2016–2018 time window where both labels are well-represented. Each article is segmented into three structural sections: title, lead (first three sentences of the body), and body (remaining sentences), using a rule-based sentence splitter. The dataset is split 70/10/20 into train, development, and test sets stratified by label and topic, sorted by publication date to avoid temporal leakage.
 
@@ -158,7 +172,7 @@ For classification, we train (i) Logistic Regression and (ii) Random Forest usin
 | `abs_future_ratio` | 0.000 | 0.016 | 0.534 | 0.016 | |
 | `art_adv_total` | 2.192 | 1.274 | 0.061 | −0.246 | |
 
-*Table 2: Mann-Whitney U tests for H1 features.*
+*Table 3: Mann-Whitney U tests for H1 features.*
 
 **H1 is not supported.** None of the inconsistency features reach significance. Notably, real news has marginally more inconsistencies on average than fake news — the opposite of the predicted direction. The temporal adverb count approaches significance (p = 0.061) but does not cross the threshold. This null result most likely reflects the limitations of the regex-based tagger, which captures only lexically explicit temporal expressions and misses many implicit or contextually-resolved references. A richer temporal resolver would be required to adequately test H1.
 
@@ -174,7 +188,7 @@ For classification, we train (i) Logistic Regression and (ii) Random Forest usin
 | `art_aspect_perfect` | 0.035 | 0.057 | 0.056 | 0.259 | |
 | `art_aspect_progressive` | 0.034 | 0.028 | 0.160 | −0.188 | |
 
-*Table 3: Mann-Whitney U tests for H2 features (selected).*
+*Table 4: Mann-Whitney U tests for H2 features (selected).*
 
 **H2 is partially supported.** The headline claim of higher shift rate and entropy in fake news is not confirmed. However, tense distributions differ strongly: fake news uses significantly more present tense (mean 0.613 vs 0.497, p = 0.0015) and future tense (0.034 vs 0.016, p = 0.0025), while real news uses significantly more past tense (0.487 vs 0.353, p = 0.0002, *r* = 0.50, a large effect). This is consistent with Grieve and Woodfield's (2023) register analysis and Biber's (1988) finding that past tense clusters with informational written registers. Fake news appears to adopt a present-tense immediacy stance throughout the article, not just in headlines.
 
@@ -192,7 +206,7 @@ Spearman correlations between `event_misalignment` and each coherence measure sh
 | `align_title_lead` | 0.645 | 0.845 | 0.024 | 0.306 | \* |
 | `align_lead_body` | 0.276 | 0.423 | 0.139 | 0.201 | |
 
-*Table 4: Mann-Whitney U tests for H4 features.*
+*Table 5: Mann-Whitney U tests for H4 features.*
 
 **H4 is supported.** Fake news shows significantly greater tense misalignment between title and body (p = 0.007, *r* = 0.36) and between title and lead (p = 0.024, *r* = 0.31). Real news has consistently higher alignment scores — its titles use tense that is consistent with the body and lead. Fake news titles depart from the tense register of the rest of the article, reflecting the pattern described by Ayman Hamad Rlneil Hamdan (2016) whereby headlines use present tense for immediacy while bodies report in past tense — but exaggerating this contrast beyond what is normal in legitimate reporting. The lead–body alignment is not significant, suggesting the title is the primary site of the structural break.
 
@@ -204,7 +218,7 @@ Spearman correlations between `event_misalignment` and each coherence measure sh
 | Random Forest (temporal) | 0.727 | 0.538 | 0.538 | 0.538 | 0.791 |
 | LogReg (BoW baseline) | 0.966 | 0.926 | 0.962 | 0.943 | 0.997 |
 
-*Table 5: Classification performance on the test set.*
+*Table 6: Classification performance on the test set.*
 
 The BoW baseline achieves near-perfect performance, consistent with Ahmed et al. (2017) — the ISOT dataset has strong lexical separability due to systematic topic and source differences. However, the Random Forest using only temporal features achieves 0.79 AUC, well above chance, confirming that temporal structure carries meaningful discriminative signal independent of topical content.
 

@@ -16,8 +16,8 @@ Two coherence measures per article:
      – entity_unique_ratio     = unique entities / total entity mentions
      – entity_grid_ss          = proportion of S→S transitions (entity keeps subject)
 
-Input  : data/processed/corpus.parquet
-Output : data/processed/features_coherence.parquet
+Input  : data/processed/corpus.csv
+Output : data/processed/features_coherence.csv
 """
 
 import logging
@@ -30,7 +30,7 @@ import pandas as pd
 import spacy
 from tqdm import tqdm
 
-from src.utils import DATA_PROC, RANDOM_STATE, get_logger
+from src.utils import DATA_PROC, TABLES, RANDOM_STATE, get_logger
 
 warnings.filterwarnings("ignore")
 log = get_logger(__name__)
@@ -217,11 +217,11 @@ def compute_article_features(row: pd.Series, nlp, embedder) -> dict:
 def run(sample: int | None = None) -> pd.DataFrame:
     log.info("=== Phase 4: Coherence Scoring ===")
 
-    corpus_path = DATA_PROC / "corpus.parquet"
+    corpus_path = DATA_PROC / "corpus.csv"
     if not corpus_path.exists():
         raise FileNotFoundError(f"{corpus_path} not found. Run Phase 1 first.")
 
-    df = pd.read_parquet(corpus_path)
+    df = pd.read_csv(corpus_path)
     if sample:
         df = df.sample(n=min(sample, len(df)), random_state=RANDOM_STATE)
         log.info("Using sample of %d articles", len(df))
@@ -239,8 +239,8 @@ def run(sample: int | None = None) -> pd.DataFrame:
 
     feat_df = pd.DataFrame(records).set_index("article_id")
 
-    out_path = DATA_PROC / "features_coherence.parquet"
-    feat_df.to_parquet(out_path)
+    out_path = DATA_PROC / "features_coherence.csv"
+    feat_df.to_csv(out_path)
     log.info("Coherence features saved to %s  (%d rows, %d cols)",
              out_path, len(feat_df), feat_df.shape[1])
 
@@ -253,6 +253,13 @@ def run(sample: int | None = None) -> pd.DataFrame:
             sub["coherence_ent_rep"].mean(),
             sub["coherence_ent_ss"].mean(),
         )
+
+    # Summary measurements CSV
+    feat_cols = [c for c in feat_df.columns if c not in {"label", "split", "topic_name"}]
+    summary = feat_df.groupby("label")[feat_cols].agg(["mean", "median", "std"])
+    summary.columns = ["_".join(c) for c in summary.columns]
+    summary.to_csv(TABLES / "summary_coherence.csv")
+    log.info("Coherence feature summary saved to %s", TABLES / "summary_coherence.csv")
 
     return feat_df
 

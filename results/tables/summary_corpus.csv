@@ -1,0 +1,3 @@
+label,word_count_mean,word_count_median,word_count_std,word_count_count
+fake,441.52790296924707,388.0,303.5132880953168,15088
+real,388.5116826923077,362.0,270.49124511948077,20800

@@ -2,7 +2,7 @@
 Phase 1 – Dataset loading, cleaning, topic clustering, sectioning, and splitting.
 
 Expected inputs : data/raw/True.csv  and  data/raw/Fake.csv  (ISOT dataset).
-Outputs         : data/processed/corpus.parquet   (full cleaned corpus with splits)
+Outputs         : data/processed/corpus.csv   (full cleaned corpus with splits)
                   data/processed/topic_model.pkl  (fitted KMeans model)
 """
 
@@ -21,7 +21,7 @@ from sklearn.preprocessing import normalize
 from tqdm import tqdm
 
 from src.utils import (
-    DATA_RAW, DATA_PROC, RANDOM_STATE, N_TOPICS, TOPIC_NAMES, get_logger,
+    DATA_RAW, DATA_PROC, RESULTS, RANDOM_STATE, N_TOPICS, TOPIC_NAMES, get_logger,
 )
 
 warnings.filterwarnings("ignore")
@@ -250,12 +250,23 @@ def run(start_date: str = "2016-01-01", end_date: str = "2018-01-01") -> pd.Data
     df = assign_topics(df)
     df = split_corpus(df)
 
-    out_path = DATA_PROC / "corpus.parquet"
-    # Store sentences as joined string for parquet compatibility
+    out_path = DATA_PROC / "corpus.csv"
+    # Store sentences as joined string for CSV compatibility
     df["sentences_json"] = df["sentences"].apply(lambda s: "|||".join(s))
     df_save = df.drop(columns=["sentences"])
-    df_save.to_parquet(out_path, index=False)
+    df_save.to_csv(out_path, index=False)
     log.info("Corpus saved to %s  (%d rows)", out_path, len(df_save))
+
+    # Summary measurements
+    summary = df_save.groupby("label")[["word_count"]].agg(["mean", "median", "std", "count"])
+    summary.columns = ["_".join(c) for c in summary.columns]
+    label_counts = df_save.groupby(["label", "split"]).size().unstack(fill_value=0)
+    summary_path = RESULTS / "tables" / "summary_corpus.csv"
+    summary.to_csv(summary_path)
+    log.info("Corpus summary saved to %s", summary_path)
+    topic_dist = df_save.groupby(["topic_name", "label"]).size().unstack(fill_value=0)
+    topic_dist.to_csv(RESULTS / "tables" / "summary_corpus_topics.csv")
+    log.info("Topic distribution saved to %s", RESULTS / "tables" / "summary_corpus_topics.csv")
 
     return df
 

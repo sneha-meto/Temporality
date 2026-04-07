@@ -17,10 +17,10 @@ Classification:
 
 Outputs saved to results/tables/ and results/figures/.
 
-Input  : data/processed/features_tense.parquet
-         data/processed/features_temporal.parquet
-         data/processed/features_coherence.parquet
-         data/processed/corpus.parquet  (for BoW baseline)
+Input  : data/processed/features_tense.csv
+         data/processed/features_temporal.csv
+         data/processed/features_coherence.csv
+         data/processed/corpus.csv  (for BoW baseline)
 Output : results/tables/hypothesis_tests.csv
          results/tables/classification_results.csv
          results/tables/spearman_correlations.csv
@@ -60,9 +60,9 @@ sns.set_theme(style="whitegrid", palette="muted")
 
 def load_features() -> pd.DataFrame:
     paths = {
-        "tense":    DATA_PROC / "features_tense.parquet",
-        "temporal": DATA_PROC / "features_temporal.parquet",
-        "coherence":DATA_PROC / "features_coherence.parquet",
+        "tense":    DATA_PROC / "features_tense.csv",
+        "temporal": DATA_PROC / "features_temporal.csv",
+        "coherence":DATA_PROC / "features_coherence.csv",
     }
     missing = [n for n, p in paths.items() if not p.exists()]
     if missing:
@@ -73,7 +73,7 @@ def load_features() -> pd.DataFrame:
 
     dfs = {}
     for name, path in paths.items():
-        df = pd.read_parquet(path)
+        df = pd.read_csv(path, index_col=0)
         # Keep only feature cols (drop duplicated metadata)
         meta = [c for c in ["label", "split", "topic_name"] if c in df.columns]
         dfs[name] = df
@@ -485,7 +485,7 @@ def run() -> None:
 
     # ── Classification ────────────────────────────────────────────
     try:
-        corpus_df = pd.read_parquet(DATA_PROC / "corpus.parquet")
+        corpus_df = pd.read_csv(DATA_PROC / "corpus.csv")
     except Exception:
         corpus_df = None
 

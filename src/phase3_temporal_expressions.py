@@ -11,8 +11,8 @@ Features extracted per article / section:
 Uses a pure-Python regex tagger to normalise temporal expressions.
 If py_heideltime is installed and Java is available it will be used instead.
 
-Input  : data/processed/corpus.parquet
-Output : data/processed/features_temporal.parquet
+Input  : data/processed/corpus.csv
+Output : data/processed/features_temporal.csv
 """
 
 import re
@@ -28,7 +28,7 @@ from dateutil import parser as date_parser
 from tqdm import tqdm
 
 from src.utils import (
-    DATA_PROC, RANDOM_STATE, ORDERING_CONNECTIVES,
+    DATA_PROC, TABLES, RANDOM_STATE, ORDERING_CONNECTIVES,
     PRESENT_ADVERBIALS, PAST_ADVERBIALS, FUTURE_ADVERBIALS,
     get_logger,
 )
@@ -330,11 +330,11 @@ def compute_article_features(row: pd.Series) -> dict:
 def run(sample: int | None = None) -> pd.DataFrame:
     log.info("=== Phase 3: Temporal Expressions & Event Sequencing ===")
 
-    corpus_path = DATA_PROC / "corpus.parquet"
+    corpus_path = DATA_PROC / "corpus.csv"
     if not corpus_path.exists():
         raise FileNotFoundError(f"{corpus_path} not found. Run Phase 1 first.")
 
-    df = pd.read_parquet(corpus_path)
+    df = pd.read_csv(corpus_path, parse_dates=["pub_date"])
     if sample:
         df = df.sample(n=min(sample, len(df)), random_state=RANDOM_STATE)
         log.info("Using sample of %d articles", len(df))
@@ -349,8 +349,8 @@ def run(sample: int | None = None) -> pd.DataFrame:
 
     feat_df = pd.DataFrame(records).set_index("article_id")
 
-    out_path = DATA_PROC / "features_temporal.parquet"
-    feat_df.to_parquet(out_path)
+    out_path = DATA_PROC / "features_temporal.csv"
+    feat_df.to_csv(out_path)
     log.info("Temporal features saved to %s  (%d rows, %d cols)",
              out_path, len(feat_df), feat_df.shape[1])
 
@@ -363,6 +363,13 @@ def run(sample: int | None = None) -> pd.DataFrame:
             sub["event_misalignment"].mean(),
             sub["conn_density"].mean(),
         )
+
+    # Summary measurements CSV
+    feat_cols = [c for c in feat_df.columns if c not in {"label", "split", "topic_name"}]
+    summary = feat_df.groupby("label")[feat_cols].agg(["mean", "median", "std"])
+    summary.columns = ["_".join(c) for c in summary.columns]
+    summary.to_csv(TABLES / "summary_temporal.csv")
+    log.info("Temporal feature summary saved to %s", TABLES / "summary_temporal.csv")
 
     return feat_df
 

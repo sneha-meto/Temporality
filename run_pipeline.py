@@ -18,10 +18,10 @@ Usage
 Flags
 ─────
   --sample N        Process only N randomly sampled articles (for testing)
-  --skip-phase1     Skip Phase 1 (assumes corpus.parquet already exists)
-  --skip-phase2     Skip Phase 2 (assumes features_tense.parquet already exists)
-  --skip-phase3     Skip Phase 3 (assumes features_temporal.parquet already exists)
-  --skip-phase4     Skip Phase 4 (assumes features_coherence.parquet already exists)
+  --skip-phase1     Skip Phase 1 (assumes corpus.csv already exists)
+  --skip-phase2     Skip Phase 2 (assumes features_tense.csv already exists)
+  --skip-phase3     Skip Phase 3 (assumes features_temporal.csv already exists)
+  --skip-phase4     Skip Phase 4 (assumes features_coherence.csv already exists)
   --skip-phase5     Skip Phase 5 (analysis only)
   --only PHASE      Run only the specified phase (phase1..phase5)
 """

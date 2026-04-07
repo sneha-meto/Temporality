@@ -9,8 +9,8 @@ For each article and each section (title / lead / body) we extract:
   - Sectional alignment : L1 distance between tense distributions of (title vs body, lead vs body)
   - Aspect distribution : proportions of simple / progressive / perfect / perfect-progressive
 
-Input  : data/processed/corpus.parquet
-Output : data/processed/features_tense.parquet
+Input  : data/processed/corpus.csv
+Output : data/processed/features_tense.csv
 """
 
 import logging
@@ -23,7 +23,7 @@ import spacy
 from tqdm import tqdm
 
 from src.utils import (
-    DATA_PROC, RANDOM_STATE, TENSES, ASPECTS,
+    DATA_PROC, TABLES, RANDOM_STATE, TENSES, ASPECTS,
     PAST, PRESENT, FUTURE,
     SIMPLE, PROGRESSIVE, PERFECT, PERFECT_PROGRESSIVE,
     get_logger,
@@ -273,13 +273,13 @@ def compute_article_features(row: pd.Series, nlp) -> dict:
 def run(sample: int | None = None) -> pd.DataFrame:
     log.info("=== Phase 2: Tense & Aspect Feature Extraction ===")
 
-    corpus_path = DATA_PROC / "corpus.parquet"
+    corpus_path = DATA_PROC / "corpus.csv"
     if not corpus_path.exists():
         raise FileNotFoundError(
             f"{corpus_path} not found. Run Phase 1 first."
         )
 
-    df = pd.read_parquet(corpus_path)
+    df = pd.read_csv(corpus_path)
     if sample:
         df = df.sample(n=min(sample, len(df)), random_state=RANDOM_STATE)
         log.info("Using sample of %d articles", len(df))
@@ -296,8 +296,8 @@ def run(sample: int | None = None) -> pd.DataFrame:
 
     feat_df = pd.DataFrame(records).set_index("article_id")
 
-    out_path = DATA_PROC / "features_tense.parquet"
-    feat_df.to_parquet(out_path)
+    out_path = DATA_PROC / "features_tense.csv"
+    feat_df.to_csv(out_path)
     log.info("Tense features saved to %s  (%d rows, %d cols)",
              out_path, len(feat_df), feat_df.shape[1])
 
@@ -311,6 +311,14 @@ def run(sample: int | None = None) -> pd.DataFrame:
             sub["art_entropy"].mean(),
             sub["art_prop_past"].mean(),
         )
+
+    # Summary measurements CSV
+    feat_cols = [c for c in feat_df.columns if c not in {"label", "split", "topic_name"}]
+    summary = feat_df.groupby("label")[feat_cols].agg(["mean", "median", "std"])
+    summary.columns = ["_".join(c) for c in summary.columns]
+    summary_path = TABLES / "summary_tense.csv"
+    summary.to_csv(summary_path)
+    log.info("Tense feature summary saved to %s", summary_path)
 
     return feat_df
 
