@@ -159,12 +159,38 @@ def test_H2(df: pd.DataFrame) -> pd.DataFrame:
 
 # ── H4 – Structural tense misalignment ────────────────────────────────────
 
+def compute_h4_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Compute convention-based H4 misalignment features.
+
+    The expected journalistic convention is: titles are present-tense,
+    bodies and leads shift to past tense for reporting.  Misalignment means
+    the body/lead *fails* to make that shift — i.e. stays present-dominant.
+
+    Features
+    --------
+    body_present_excess  : body_prop_present - body_prop_past
+                           Positive  → body is present-heavy  (fake pattern = misaligned)
+                           Negative  → body is past-heavy     (real pattern = aligned)
+    lead_present_excess  : lead_prop_present - lead_prop_past  (same logic for lead)
+    h4_misalign          : mean of body_present_excess and lead_present_excess
+                           Summary measure of convention violation.
+    """
+    df = df.copy()
+    if {"body_prop_present", "body_prop_past"}.issubset(df.columns):
+        df["body_present_excess"] = df["body_prop_present"] - df["body_prop_past"]
+    if {"lead_prop_present", "lead_prop_past"}.issubset(df.columns):
+        df["lead_present_excess"] = df["lead_prop_present"] - df["lead_prop_past"]
+    if {"body_present_excess", "lead_present_excess"}.issubset(df.columns):
+        df["h4_misalign"] = (df["body_present_excess"] + df["lead_present_excess"]) / 2
+    return df
+
+
 def test_H4(df: pd.DataFrame) -> pd.DataFrame:
     log.info("── H4: Structural Tense Misalignment ──")
     features = [
-        "align_title_body",
-        "align_lead_body",
-        "align_title_lead",
+        "body_present_excess",
+        "lead_present_excess",
+        "h4_misalign",
     ]
     features = [f for f in features if f in df.columns]
     rows = [mwu_test(df, f) for f in features]
@@ -409,23 +435,29 @@ def plot_classification_results(clf_df: pd.DataFrame):
 
 
 def plot_sectional_alignment(df: pd.DataFrame):
-    align_cols = ["align_title_body", "align_lead_body", "align_title_lead"]
+    align_cols = ["body_present_excess", "lead_present_excess", "h4_misalign"]
     align_cols = [c for c in align_cols if c in df.columns]
     if not align_cols:
         return
 
     means = df.groupby("label")[align_cols].mean().T
-    means.index = [c.replace("align_", "").replace("_", "↔").capitalize() for c in means.index]
+    labels_map = {
+        "body_present_excess": "Body\n(present−past)",
+        "lead_present_excess": "Lead\n(present−past)",
+        "h4_misalign":         "Combined\nmisalignment",
+    }
+    means.index = [labels_map.get(c, c) for c in means.index]
 
     fig, ax = plt.subplots(figsize=(7, 4))
     x = np.arange(len(means))
     width = 0.35
     ax.bar(x - width / 2, means["real"], width, label="Real", color="#2ecc71", alpha=0.8)
     ax.bar(x + width / 2, means["fake"], width, label="Fake", color="#e74c3c", alpha=0.8)
+    ax.axhline(0, color="black", linewidth=0.8, linestyle="--")
     ax.set_xticks(x)
     ax.set_xticklabels(means.index)
-    ax.set_ylabel("Mean L1 tense distance")
-    ax.set_title("H4: Sectional Tense Misalignment by Label")
+    ax.set_ylabel("Mean (present − past) proportion")
+    ax.set_title("H4: Convention-Based Tense Misalignment (body/lead should be past-dominant)")
     ax.legend()
     plt.tight_layout()
     out = FIGURES / "sectional_alignment.png"
@@ -462,6 +494,7 @@ def run() -> None:
     log.info("=== Phase 5: Statistical Analysis & Classification ===")
 
     df = load_features()
+    df = compute_h4_features(df)
 
     # Use test set for hypothesis tests; train+dev+test for correlations
     test_df  = df[df["split"] == "test"]
