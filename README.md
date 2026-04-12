@@ -49,15 +49,24 @@ pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
 
-**Dataset:** ISOT Fake News Dataset — downloaded automatically via `kagglehub` on first run.
-You need a Kaggle account. Authenticate once with:
-```bash
-pip install kaggle
-# place your kaggle.json API token in ~/.kaggle/kaggle.json
-```
-Or manually download `True.csv` and `Fake.csv` and place them in `data/raw/`.
+## Dataset: ISOT Fake News Dataset
 
----
+Dataset link: https://www.kaggle.com/datasets/csmalarkodi/isot-fake-news-dataset
+
+**Option A — Manual download (recommended):**
+1. Download the dataset from the link above (requires a free Kaggle account).
+2. Extract the archive and place the two CSV files in `data/raw/`:
+
+```
+Temporality/
+└── data/
+    └── raw/
+        ├── True.csv
+        └── Fake.csv
+```
+
+The filenames must be exactly `True.csv` and `Fake.csv` (case-sensitive).
+
 
 ## Running the Pipeline
 
