@@ -13,6 +13,7 @@ A research pipeline for the TCD group paper investigating whether temporal langu
 | H1 | Fake news contains more temporal inconsistencies (mismatched event dates, anachronistic references) |
 | H2 | Fake news shows higher tense entropy and more tense shifts across article sections |
 | H3 | Fake news has lower narrative coherence, correlated with higher event-timeline misalignment |
+| H4 | Fake news shows greater tense misalignment between structural sections (title/lead/body)
 
 ---
 
